@@ -166,46 +166,45 @@ def runCmake (root : FilePath) (flags : Array String) : LogIO Unit := do
     error "Failed to run cmake"
 
 
-target libopenblas pkg : FilePath := do
-  afterReleaseAsync pkg do
-    let rootDir := pkg.buildDir / "OpenBLAS"
-    ensureDirExists rootDir
-    let dst := pkg.nativeLibDir / (nameToSharedLib "openblas")
-    createParentDirs dst
-    let url := "https://github.com/OpenMathLib/OpenBLAS"
-
-    try
-      let depTrace := Hash.ofString url
-      setTrace depTrace
-      buildFileUnlessUpToDate' dst do
-        logInfo s!"Cloning OpenBLAS from {url}"
-        gitClone url pkg.buildDir
-
-        let numThreads := max 4 $ min 32 (← nproc)
-        let flags := #["NO_LAPACK=1", "NO_FORTRAN=1", s!"-j{numThreads}"]
-        logInfo s!"Building OpenBLAS with `make{flags.foldl (· ++ " " ++ ·) ""}`"
-        proc (quiet := true) {
-          cmd := "make"
-          args := flags
-          cwd := rootDir
-        }
-        proc {
-          cmd := "cp"
-          args := #[(rootDir / nameToSharedLib "openblas").toString, dst.toString]
-        }
-        -- TODO: Don't hardcode the version "0".
-        let dst' := pkg.nativeLibDir / (nameToVersionedSharedLib "openblas" "0")
-        proc {
-          cmd := "cp"
-          args := #[dst.toString, dst'.toString]
-        }
-      let _ := (← getTrace)
-      return dst
-
-    else
-      addTrace <| ← computeTrace dst
-      return dst
-
+/- target libopenblas pkg : FilePath := do -/
+/-   afterReleaseAsync pkg do -/
+/-     let rootDir := pkg.buildDir / "OpenBLAS" -/
+/-     ensureDirExists rootDir -/
+/-     let dst := pkg.nativeLibDir / (nameToSharedLib "openblas") -/
+/-     createParentDirs dst -/
+/-     let url := "https://github.com/OpenMathLib/OpenBLAS" -/
+/-  -/
+/-     try -/
+/-       let depTrace := Hash.ofString url -/
+/-       setTrace depTrace -/
+/-       buildFileUnlessUpToDate' dst do -/
+/-         logInfo s!"Cloning OpenBLAS from {url}" -/
+/-         gitClone url pkg.buildDir -/
+/-  -/
+/-         let numThreads := max 4 $ min 32 (← nproc) -/
+/-         let flags := #["NO_LAPACK=1", "NO_FORTRAN=1", s!"-j{numThreads}"] -/
+/-         logInfo s!"Building OpenBLAS with `make{flags.foldl (· ++ " " ++ ·) ""}`" -/
+/-         proc (quiet := true) { -/
+/-           cmd := "make" -/
+/-           args := flags -/
+/-           cwd := rootDir -/
+/-         } -/
+/-         proc { -/
+/-           cmd := "cp" -/
+/-           args := #[(rootDir / nameToSharedLib "openblas").toString, dst.toString] -/
+/-         } -/
+/-         -- TODO: Don't hardcode the version "0". -/
+/-         let dst' := pkg.nativeLibDir / (nameToVersionedSharedLib "openblas" "0") -/
+/-         proc { -/
+/-           cmd := "cp" -/
+/-           args := #[dst.toString, dst'.toString] -/
+/-         } -/
+/-       let _ := (← getTrace) -/
+/-       return dst -/
+/-  -/
+/-     else -/
+/-       addTrace <| ← computeTrace dst -/
+/-       return dst -/
 
 def getCt2CmakeFlags : IO (Array String) := do
   let mut flags := #["-DOPENMP_RUNTIME=NONE", "-DWITH_MKL=OFF"]
@@ -224,68 +223,68 @@ def getCt2CmakeFlags : IO (Array String) := do
 
 
 /- Download and build CTranslate2. Copy its C++ header files to `build/include` and shared libraries to `build/lib` -/
-target libctranslate2 pkg : FilePath := do
-  if getOS! == .linux then
-    let openblas ← libopenblas.fetch
-    let _ ← openblas.await
-
-  afterReleaseAsync pkg do
-    let dst := pkg.nativeLibDir / (nameToSharedLib "ctranslate2")
-    createParentDirs dst
-    let ct2URL := "https://github.com/OpenNMT/CTranslate2"
-
-    try
-      let depTrace := Hash.ofString ct2URL
-      setTrace depTrace
-      buildFileUnlessUpToDate' dst do
-        logInfo s!"Cloning CTranslate2 from {ct2URL}"
-        gitClone ct2URL pkg.buildDir
-
-        let ct2Dir := pkg.buildDir / "CTranslate2"
-        let flags ← getCt2CmakeFlags
-        logInfo s!"Configuring CTranslate2 with `cmake{flags.foldl (· ++ " " ++ ·) ""} ..`"
-        runCmake ct2Dir flags
-        let numThreads := max 4 $ min 32 (← nproc)
-        logInfo s!"Building CTranslate2 with `make -j{numThreads}`"
-        proc {
-          cmd := "make"
-          args := #[s!"-j{numThreads}"]
-          cwd := ct2Dir / "build"
-        }
-
-        ensureDirExists $ pkg.buildDir / "include"
-        proc {
-          cmd := "cp"
-          args := #[(ct2Dir / "build" / nameToSharedLib "ctranslate2").toString, dst.toString]
-        }
-        -- TODO: Don't hardcode the version "4".
-        let dst' := pkg.nativeLibDir / (nameToVersionedSharedLib "ctranslate2" "4")
-        proc {
-          cmd := "cp"
-          args := #[dst.toString, dst'.toString]
-        }
-        proc {
-          cmd := "cp"
-          args := #["-r", (ct2Dir / "include" / "ctranslate2").toString, (pkg.buildDir / "include" / "ctranslate2").toString]
-        }
-        proc {
-          cmd := "cp"
-          args := #["-r", (ct2Dir / "include" / "nlohmann").toString, (pkg.buildDir / "include" / "nlohmann").toString]
-        }
-        proc {
-          cmd := "cp"
-          args := #["-r", (ct2Dir / "include" / "half_float").toString, (pkg.buildDir / "include" / "half_float").toString]
-        }
-        proc {
-          cmd := "rm"
-          args := #["-rf", ct2Dir.toString]
-        }
-      let _ := (← getTrace)
-      return dst
-    else
-      addTrace <| ← computeTrace dst
-      return dst
-
+/- target libctranslate2 pkg : FilePath := do -/
+/-   if getOS! == .linux then -/
+/-     let openblas ← libopenblas.fetch -/
+/-     let _ ← openblas.await -/
+/-  -/
+/-   afterReleaseAsync pkg do -/
+/-     let dst := pkg.nativeLibDir / (nameToSharedLib "ctranslate2") -/
+/-     createParentDirs dst -/
+/-     let ct2URL := "https://github.com/OpenNMT/CTranslate2" -/
+/-  -/
+/-     try -/
+/-       let depTrace := Hash.ofString ct2URL -/
+/-       setTrace depTrace -/
+/-       buildFileUnlessUpToDate' dst do -/
+/-         logInfo s!"Cloning CTranslate2 from {ct2URL}" -/
+/-         gitClone ct2URL pkg.buildDir -/
+/-  -/
+/-         let ct2Dir := pkg.buildDir / "CTranslate2" -/
+/-         let flags ← getCt2CmakeFlags -/
+/-         logInfo s!"Configuring CTranslate2 with `cmake{flags.foldl (· ++ " " ++ ·) ""} ..`" -/
+/-         runCmake ct2Dir flags -/
+/-         let numThreads := max 4 $ min 32 (← nproc) -/
+/-         logInfo s!"Building CTranslate2 with `make -j{numThreads}`" -/
+/-         proc { -/
+/-           cmd := "make" -/
+/-           args := #[s!"-j{numThreads}"] -/
+/-           cwd := ct2Dir / "build" -/
+/-         } -/
+/-  -/
+/-         ensureDirExists $ pkg.buildDir / "include" -/
+/-         proc { -/
+/-           cmd := "cp" -/
+/-           args := #[(ct2Dir / "build" / nameToSharedLib "ctranslate2").toString, dst.toString] -/
+/-         } -/
+/-         -- TODO: Don't hardcode the version "4". -/
+/-         let dst' := pkg.nativeLibDir / (nameToVersionedSharedLib "ctranslate2" "4") -/
+/-         proc { -/
+/-           cmd := "cp" -/
+/-           args := #[dst.toString, dst'.toString] -/
+/-         } -/
+/-         proc { -/
+/-           cmd := "cp" -/
+/-           args := #["-r", (ct2Dir / "include" / "ctranslate2").toString, (pkg.buildDir / "include" / "ctranslate2").toString] -/
+/-         } -/
+/-         proc { -/
+/-           cmd := "cp" -/
+/-           args := #["-r", (ct2Dir / "include" / "nlohmann").toString, (pkg.buildDir / "include" / "nlohmann").toString] -/
+/-         } -/
+/-         proc { -/
+/-           cmd := "cp" -/
+/-           args := #["-r", (ct2Dir / "include" / "half_float").toString, (pkg.buildDir / "include" / "half_float").toString] -/
+/-         } -/
+/-         proc { -/
+/-           cmd := "rm" -/
+/-           args := #["-rf", ct2Dir.toString] -/
+/-         } -/
+/-       let _ := (← getTrace) -/
+/-       return dst -/
+/-     else -/
+/-       addTrace <| ← computeTrace dst -/
+/-       return dst -/
+/-  -/
 
 def buildCpp (pkg : Package) (path : FilePath) (dep : Job FilePath) : SpawnM (Job FilePath) := do
   let optLevel := if pkg.buildType == .release then "-O3" else "-O0"
