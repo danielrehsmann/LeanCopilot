@@ -286,26 +286,27 @@ def getCt2CmakeFlags : IO (Array String) := do
 /-       return dst -/
 /-  -/
 
-def buildCpp (pkg : Package) (path : FilePath) (dep : Job FilePath) : SpawnM (Job FilePath) := do
-  let optLevel := if pkg.buildType == .release then "-O3" else "-O0"
-  let flags := #["-fPIC", "-std=c++17", optLevel]
-  let args := flags ++ #["-I", (← getLeanIncludeDir).toString, "-I", (pkg.buildDir / "include").toString]
-  let oFile := pkg.buildDir / (path.withExtension "o")
-  let srcJob ← inputTextFile <| pkg.dir / path
-  buildFileAfterDep oFile (.collectList [srcJob, dep]) (extraDepTrace := computeHash flags) fun deps =>
-    compileO oFile deps[0]! args "c++"
+/- def buildCpp (pkg : Package) (path : FilePath) (dep : Job FilePath) : SpawnM (Job FilePath) := do -/
+/-   let optLevel := if pkg.buildType == .release then "-O3" else "-O0" -/
+/-   let flags := #["-fPIC", "-std=c++17", optLevel] -/
+/-   let args := flags ++ #["-I", (← getLeanIncludeDir).toString, "-I", (pkg.buildDir / "include").toString] -/
+/-   let oFile := pkg.buildDir / (path.withExtension "o") -/
+/-   let srcJob ← inputTextFile <| pkg.dir / path -/
+/-   buildFileAfterDep oFile (.collectList [srcJob, dep]) (extraDepTrace := computeHash flags) fun deps => -/
+/-     compileO oFile deps[0]! args "c++" -/
+/-  -/
+/-  -/
+/- target ct2.o pkg : FilePath := do -/
+/-   let ct2 ← libctranslate2.fetch -/
+/-   let build := buildCpp pkg "cpp/ct2.cpp" ct2 -/
+/-   afterReleaseSync pkg build -/
+/-  -/
+/-  -/
+/- extern_lib libleanffi pkg := do -/
+/-   let name := nameToStaticLib "leanffi" -/
+/-   let ct2O ← ct2.o.fetch -/
+/-   buildStaticLib (pkg.nativeLibDir / name) #[ct2O] -/
 
-
-target ct2.o pkg : FilePath := do
-  let ct2 ← libctranslate2.fetch
-  let build := buildCpp pkg "cpp/ct2.cpp" ct2
-  afterReleaseSync pkg build
-
-
-extern_lib libleanffi pkg := do
-  let name := nameToStaticLib "leanffi"
-  let ct2O ← ct2.o.fetch
-  buildStaticLib (pkg.nativeLibDir / name) #[ct2O]
 
 
 require batteries from git "https://github.com/leanprover-community/batteries.git" @ "main"
