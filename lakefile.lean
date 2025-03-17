@@ -83,7 +83,6 @@ def getPlatform! : IO SupportedPlatform := do
 
 
 package LeanCopilot where
-  externals := #[]
   preferReleaseBuild := get_config? noCloudRelease |>.isNone
   buildArchive? := buildArchiveName
   precompileModules := true
